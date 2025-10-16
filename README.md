@@ -18,6 +18,7 @@
 ## 预览
 
 ![ChatGPT Answer → Markdown 插件演示](./images/demo.gif)
+![ChatGPT Answer → Markdown 插件演示](./images/demo1.gif)
 
 ---
 
