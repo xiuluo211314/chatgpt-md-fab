@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Answer → Markdown (FAB)",
+  "version": "1.1.2",
+  "description": "在 ChatGPT 页面注入一个圆形悬浮按钮：将选中的单条回答导出为 Markdown（复制并可选下载）。支持深色主题、悬停展开、可拖动并记忆位置。",
+  "permissions": [
+    "clipboardWrite",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
