@@ -1,6 +1,13 @@
 # ChatGPT Answer → Markdown (FAB)
 
-一个极简的 Chrome 扩展：在 ChatGPT 页面右下角注入一个**圆形悬浮按钮（FAB）**，允许你**选中任意一条回答**并一键导出为 **Markdown**（自动复制到剪贴板并可选择下载 `.md` 文件）。
+<div align="center">
+  <img src="./images/checkIn_256_icon.png" alt="" width="128">
+  <h1>Note163Checkin</h1>
+  <blockquote>ChatGPT输出结果转换Markdown格式（支持数学符号）</blockquote>
+</div>
+
+一个极简的 Chrome 扩展：完美支持数学公式或符号的输出。
+在 ChatGPT 页面右下角注入一个**圆形悬浮按钮（FAB）**，允许你**选中任意一条回答**并一键导出为 **Markdown**（自动复制到剪贴板并可选择下载 `.md` 文件）。
 
 - ✅ 深色主题友好（风格与 OpenAI 深色主题接近，但略深以保证对比度）  
 - ✅ 悬停自动展开显示文案，默认以圆形“MD”图标占位  
