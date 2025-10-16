@@ -6,6 +6,10 @@
 
 一个极简的 Chrome 扩展：完美支持数学公式或符号的输出。
 在 ChatGPT 页面右下角注入一个**圆形悬浮按钮（FAB）**，允许你**选中任意一条回答**并一键导出为 **Markdown**（自动复制到剪贴板并可选择下载 `.md` 文件）。
+> A minimalist Chrome extension that perfectly supports the output of mathematical formulas and symbols.
+It injects a **floating circular button (FAB)** in the bottom-right corner of the ChatGPT page, allowing you to **select any response** and **export it to Markdown** with one click — automatically copying it to your clipboard and optionally downloading it as a `.md` file.
+
+
 
 - ✅ 深色主题友好（风格与 OpenAI 深色主题接近，但略深以保证对比度）  
 - ✅ 悬停自动展开显示文案，默认以圆形“MD”图标占位  
@@ -16,8 +20,10 @@
 ---
 
 ## 预览
-
+下载文件效果如下：
 ![ChatGPT Answer → Markdown 插件演示](./images/demo.gif)
+
+在Obsidian中粘贴效果图下：
 ![ChatGPT Answer → Markdown 插件演示](./images/demo1.gif)
 
 ---
