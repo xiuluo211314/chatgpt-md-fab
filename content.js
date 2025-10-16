@@ -80,7 +80,6 @@
     return host;
   }
 
-  // type: 'info' | 'warn' | 'error'
   function toast(message, type = "info", duration = 2000) {
     const host = ensureToastHost();
     const node = document.createElement("div");
@@ -97,21 +96,11 @@
     node.appendChild(bar);
     node.appendChild(content);
     host.appendChild(node);
-    // 动画进场
     requestAnimationFrame(() => node.classList.add("show"));
 
-    // 自动消失
-    const remover = () => {
-      node.classList.remove("show");
-      setTimeout(() => node.remove(), 200);
-    };
+    const remover = () => { node.classList.remove("show"); setTimeout(() => node.remove(), 200); };
     const timer = setTimeout(remover, Math.max(800, duration));
-
-    // 点击可立即关闭
-    node.addEventListener("click", () => {
-      clearTimeout(timer);
-      remover();
-    });
+    node.addEventListener("click", () => { clearTimeout(timer); remover(); });
   }
 
   // =============== 选中回答 → Markdown（核心逻辑） ===============
@@ -119,8 +108,9 @@
 
   function getAssistantContainer() {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return null;
-    let node = toEl(sel.getRangeAt(0).commonAncestorContainer);
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null; // 必须先选中文字
+    const range = sel.getRangeAt(0);
+    let node = toEl(range.commonAncestorContainer);
 
     const isAns = el => {
       if (!el || !el.closest) return null;
@@ -140,7 +130,7 @@
       if (a) return a;
     }
 
-    let cur = toEl(window.getSelection().anchorNode);
+    let cur = toEl(sel.anchorNode);
     while (cur && !isAns(cur)) cur = cur.parentElement;
     return cur ? isAns(cur) : null;
   }
@@ -286,6 +276,10 @@
 
   function sanitizeTitle(s) { return (s || "chatgpt").replace(/[\\/:*?"<>|]/g, "_").slice(0, 60); }
 
+  function clearSelection() {
+    try { const sel = window.getSelection(); sel && sel.removeAllRanges(); } catch {}
+  }
+
   async function handleSelectedAnswerToMarkdown() {
     try {
       const ans = getAssistantContainer();
@@ -301,6 +295,9 @@
       downloadText(`${safeTitle}-selected-answer.md`, md);
 
       toast("✅ 已复制并下载该条回答的 Markdown。", "info", 2000);
+
+      // 成功后清除选区，下一次必须重新选择
+      clearSelection();
     } catch (err) {
       toast("执行异常：" + (err && err.message ? err.message : err), "error", 2500);
     }
@@ -319,8 +316,8 @@
         align-items: center;
         gap: 10px;
         height: 56px;
-        width: 56px;                 /* 默认圆形 */
-        padding: 0 18px;             /* 展开时用于文字留白 */
+        width: 56px;
+        padding: 0 18px;
         border-radius: 999px;
         border: 1px solid ${theme.border};
         background: ${theme.bg};
@@ -386,7 +383,7 @@
     // —— 防止拖拽后触发点击 —— //
     let dragging = false, moved = false, suppressClick = false;
     let startX = 0, startY = 0, startRight = 0, startBottom = 0;
-    const DRAG_THRESHOLD = 6; // 移动超过 6px 认为是拖拽
+    const DRAG_THRESHOLD = 6;
 
     const savePos = () => {
       const rect = btn.getBoundingClientRect();
@@ -412,7 +409,7 @@
       startX = e.clientX; startY = e.clientY;
       startRight = parseFloat(getComputedStyle(btn).right);
       startBottom = parseFloat(getComputedStyle(btn).bottom);
-      btn.style.width = "56px"; // 收起，避免展开状态拖动
+      btn.style.width = "56px";
       e.preventDefault();
     });
 
@@ -430,7 +427,6 @@
       dragging = false;
       btn.releasePointerCapture?.(e.pointerId);
       savePos();
-      // 若发生过拖拽，则本次点击无效，且不弹任何提示
       if (moved) {
         suppressClick = true;
         setTimeout(() => { suppressClick = false; }, 120);
@@ -438,9 +434,8 @@
       setTimeout(() => { btn.style.width = ""; }, 50);
     });
 
-    // 点击动作（考虑 suppressClick）
     btn.addEventListener("click", (e) => {
-      if (suppressClick) return; // 拖拽后的“误点”被抑制
+      if (suppressClick) return;
       handleSelectedAnswerToMarkdown();
     });
 
@@ -455,4 +450,7 @@
   }
 
   createFab();
+
+  // 页面初次加载时清掉任何“残留选区”，确保必须重新选择
+  try { const sel = window.getSelection(); sel && sel.removeAllRanges(); } catch {}
 })();
