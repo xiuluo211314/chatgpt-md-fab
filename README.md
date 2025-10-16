@@ -17,7 +17,7 @@
 
 ## 预览
 
-> （可在 GitHub README 中放置一张动图或截图）
+![ChatGPT Answer → Markdown 插件演示](./images/demo.gif)
 
 ---
 
