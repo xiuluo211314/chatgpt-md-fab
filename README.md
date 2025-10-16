@@ -1,8 +1,6 @@
-# ChatGPT Answer → Markdown (FAB)
-
 <div align="center">
-  <img src="./images/checkIn_256_icon.png" alt="" width="128">
-  <h1>Note163Checkin</h1>
+  <img src="./images/md_icon.png" alt="" width="128">
+  <h1>ChatGPT Answer → Markdown</h1>
   <blockquote>ChatGPT输出结果转换Markdown格式（支持数学符号）</blockquote>
 </div>
 
@@ -46,6 +44,15 @@
 4. 页面右下角会显示一个 **Toast**，2 秒后自动消失。
 
 > 如果没有事先选中回答内部的文本，按钮会提示你**先框选**，提示同样以 2 秒自动消失的 Toast 展示。
+
+---
+
+## 发电
+
+如果您觉得有用的话，欢迎来**捐赠**，请`阿洛`喝杯饮料！大家的支持就是我继续开源的动力哟~！
+
+WeChat & Alipay：
+<img src="./images/pay_tool.png" alt="" width="800px">
 
 ---
 
