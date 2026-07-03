@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT Answer → Markdown (FAB)",
-  "version": "1.1.2",
-  "description": "在 ChatGPT 页面注入一个圆形悬浮按钮：将选中的单条回答导出为 Markdown（复制并可选下载）。支持深色主题、悬停展开、可拖动并记忆位置。",
+  "name": "ChatGPT Answer to Markdown (FAB)",
+  "version": "1.2.0",
+  "description": "Injects a draggable MD floating button on ChatGPT pages to copy and download the selected assistant answer as clean Markdown.",
   "permissions": [
-    "clipboardWrite",
-    "scripting"
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

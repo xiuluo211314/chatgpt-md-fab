@@ -1,129 +1,345 @@
-<div align="center">
-  <img src="./images/md_icon.png" alt="" width="128">
-  <h1>ChatGPT Answer → Markdown</h1>
-  <blockquote>ChatGPT输出结果转换Markdown格式（支持数学符号）</blockquote>
-</div>
+# ChatGPT Answer to Markdown (FAB)
 
-一个极简的 Chrome 扩展：完美支持数学公式或符号的输出。
-在 ChatGPT 页面右下角注入一个**圆形悬浮按钮（FAB）**，允许你**选中任意一条回答**并一键导出为 **Markdown**（自动复制到剪贴板并可选择下载 `.md` 文件）。
-> A minimalist Chrome extension that perfectly supports the output of mathematical formulas and symbols.
-It injects a **floating circular button (FAB)** in the bottom-right corner of the ChatGPT page, allowing you to **select any response** and **export it to Markdown** with one click — automatically copying it to your clipboard and optionally downloading it as a `.md` file.
+> 中文 | [English](#english)
 
+<!-- Replace OWNER/REPO with your GitHub repository path, for example: Aluo123/chatgpt-md-fab -->
 
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./manifest.json)
+[![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/OWNER/REPO?style=social)](https://github.com/OWNER/REPO/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/OWNER/REPO?style=social)](https://github.com/OWNER/REPO/forks)
+[![GitHub issues](https://img.shields.io/github/issues/OWNER/REPO)](https://github.com/OWNER/REPO/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/OWNER/REPO)](https://github.com/OWNER/REPO/commits/main)
+[![GitHub release](https://img.shields.io/github/v/release/OWNER/REPO?include_prereleases)](https://github.com/OWNER/REPO/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/OWNER/REPO/total)](https://github.com/OWNER/REPO/releases)
 
-- ✅ 深色主题友好（风格与 OpenAI 深色主题接近，但略深以保证对比度）  
-- ✅ 悬停自动展开显示文案，默认以圆形“MD”图标占位  
-- ✅ 支持**拖拽移动**并**记忆位置**（刷新后仍在你拖拽的位置）  
-- ✅ 所有提示采用 **Toast**，**2 秒自动消失**，不打断操作  
-- ✅ 只保留一个主功能：**选中回答 → Markdown**
+一个 Chrome MV3 扩展：在 ChatGPT 页面右下角注入一个可拖动的 `MD` 悬浮按钮。你只需要在目标助手回答里选中任意一小段文字，点击按钮，就可以把整条回答复制并下载为干净的 Markdown。
 
----
+![Demo](./images/demo.gif)
 
-## 预览
-下载文件效果如下：
-![ChatGPT Answer → Markdown 插件演示](./images/demo.gif)
+## 目录
 
-在Obsidian中粘贴效果图下：
-![ChatGPT Answer → Markdown 插件演示](./images/demo1.gif)
+- [功能](#功能)
+- [本次修复重点](#本次修复重点)
+- [安装](#安装)
+- [使用](#使用)
+- [GitHub 统计与展示](#github-统计与展示)
+- [转换规则](#转换规则)
+- [开发与调试](#开发与调试)
+- [权限说明](#权限说明)
+- [项目结构](#项目结构)
+- [版本历史](#版本历史)
+- [English](#english)
 
----
+## 功能
 
-## 安装（开发者模式）
+- 选中任意助手回答后，一键导出整条回答，而不是只导出选中的片段。
+- 自动复制到剪贴板，并下载 `*-selected-answer.md` 文件。
+- 保留常见 Markdown 结构：标题、段落、加粗、斜体、行内代码、代码块、引用、列表、分割线、表格、图片、链接。
+- 支持 ChatGPT 当前 CodeMirror 风格代码块 DOM，避免把复制按钮、代码块标题栏等 UI 噪声写入 Markdown。
+- 支持 KaTeX 公式：块级公式导出为 `$$...$$`，行内公式导出为 `$...$`。
+- 悬浮按钮支持拖动，并记忆位置。
+- 所有转换都在当前浏览器页面本地完成，不上传、不存储对话内容。
 
-1. 下载本仓库源码（或下方 Release 的 zip 包）并解压。  
-2. 打开 Chrome，访问 `chrome://extensions/`。  
-3. 右上角开启 **开发者模式**。  
-4. 点击 **“加载已解压的扩展程序”**，选择本项目文件夹。  
-5. 打开 `https://chatgpt.com/` 或 `https://chat.openai.com/`，页面右下角会出现圆形按钮 **“MD”**。
+## 本次修复重点
 
-> 若你更喜欢**独立应用窗口**（PWA/以窗口打开），也同样支持注入按钮。
+旧版本的主要问题在 `content.js` 的 HTML 到 Markdown 转换逻辑：
 
----
+- 行内代码曾被导出成 `%60/agent%60`，现在修复为标准 Markdown 反引号：`` `/agent` ``。
+- ChatGPT 新版代码块 DOM 中嵌套了 CodeMirror 容器，旧逻辑容易把 UI 元素和代码文本混在一起。现在会先抽取真实代码文本，再生成 fenced code block。
+- `<br>` 在代码块中不一定会被 `textContent` 转成换行，导致多行代码被挤成一行。现在转换时会显式保留 `<br>` 换行。
+- 表格单元格中的 `|` 和换行现在会做 Markdown 安全处理。
+- 旧 README 和 manifest 中存在编码乱码，已恢复为可读内容。
 
-## 使用方法
+## 安装
 
-1. 在 ChatGPT 的**目标回答**内，用鼠标**随便划一下选区**（例如选一段文字）。  
-2. 点击右下角的 **MD** 按钮（悬停会展开显示“选中回答 → Markdown”）。  
-3. 扩展会：
-   - 将该条回答内容**转为 Markdown**（支持代码块、表格、KaTeX 数学）；
-   - **复制**到剪贴板；
-   - 并**下载**一个 `xxx-selected-answer.md` 文件（如想只复制，可以在代码中注释下载逻辑）。  
-4. 页面右下角会显示一个 **Toast**，2 秒后自动消失。
+1. 打开 Chrome，访问 `chrome://extensions/`。
+2. 开启右上角的“开发者模式”。
+3. 点击“加载已解压的扩展程序”。
+4. 选择本项目文件夹。
+5. 打开或刷新 `https://chatgpt.com/`。
 
-> 如果没有事先选中回答内部的文本，按钮会提示你**先框选**，提示同样以 2 秒自动消失的 Toast 展示。
+## 使用
 
----
+1. 在 ChatGPT 的目标助手回答中，用鼠标选中任意几个字。
+2. 点击页面右下角的 `MD` 按钮。
+3. 扩展会把整条助手回答转换为 Markdown，复制到剪贴板，并下载一个 `.md` 文件。
 
-## 发电
+如果没有选中助手回答中的文字，按钮会用 Toast 提示你先选中目标回答。
 
-如果您觉得有用的话，欢迎来**捐赠**，请`阿洛`喝杯饮料！大家的支持就是我继续开源的动力哟~！
+## GitHub 统计与展示
 
-WeChat & Alipay：
-<img src="./images/pay_tool.png" alt="" width="800px">
+上传到 GitHub 后，建议把 README 顶部的 `OWNER/REPO` 全部替换成你的真实仓库路径，例如：
 
----
-
-## 自定义
-
-你可以在 `content.js` 顶部修改这些行为：
-
-- **是否下载 .md**：在 `handleSelectedAnswerToMarkdown()` 中注释 `downloadText(...)`。  
-- **提示时间**：`toast(message, type, duration)` 的 `duration`（毫秒）。  
-- **按钮尺寸/展开宽度**：样式中 `.gpt-fab` 的 `height/width` 和 `:hover { width: ... }`。  
-- **颜色主题**：修改 `theme` 对象（已根据系统/页面深色主题自动选择深浅版）。
-
----
-
-## 权限说明
-
-- `clipboardWrite`：用于把导出的 Markdown 写入剪贴板。  
-- `scripting`：标准 MV3 权限（由 content script 注入 UI 并在目标域运行）。  
-- `host_permissions`：仅匹配 `chatgpt.com` 与 `chat.openai.com` 两个域名。
-
-本扩展**不会**收集、上报、存储你的任何数据。所有处理均在本地页面完成。
-
----
-
-## 目录结构
-
-```
-chatgpt-md-fab/
-├─ manifest.json        # MV3 配置
-├─ content.js           # 主要逻辑（注入 FAB、选中回答 → Markdown、Toast）
-└─ README.md
+```text
+your-name/chatgpt-md-fab
 ```
 
----
+当前 README 已预置这些主流 GitHub 展示信息：
+
+| 类型 | 用途 |
+| --- | --- |
+| Version | 显示当前扩展版本 |
+| Manifest V3 | 标明 Chrome MV3 扩展 |
+| License | 显示开源协议 |
+| Stars | 显示 GitHub Star 数 |
+| Forks | 显示 Fork 数 |
+| Issues | 显示当前 Issue 数 |
+| Last commit | 显示最近提交时间 |
+| Release | 显示最新 GitHub Release |
+| Downloads | 显示 Release 下载总量 |
+
+你也可以在 README 末尾加入 Star History 图，用于展示项目增长趋势：
+
+```markdown
+[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
+```
+
+如果后续发布到 Chrome Web Store，还可以追加：
+
+```markdown
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID)](https://chromewebstore.google.com/detail/EXTENSION_ID)
+[![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/EXTENSION_ID)](https://chromewebstore.google.com/detail/EXTENSION_ID)
+```
+
+## 转换规则
+
+| HTML / ChatGPT DOM | Markdown 输出 |
+| --- | --- |
+| `h1` - `h6` | `#` - `######` |
+| `p` | 普通段落 |
+| `strong` / `b` | `**text**` |
+| `em` / `i` | `*text*` |
+| `code` | `` `code` `` |
+| `pre` / CodeMirror code block | fenced code block |
+| `blockquote` | `> quote` |
+| `ul` / `ol` | `- item` / `1. item` |
+| `table` | Markdown table |
+| `.katex-display` | `$$...$$` |
+| `.katex` | `$...$` |
 
 ## 开发与调试
 
-- 修改代码后，回到 `chrome://extensions/` 点击对应扩展卡片的 **“重新加载”**。  
-- 建议在 ChatGPT 页面按 `F12` 打开 DevTools，随时查看 `console` 输出。
+修改代码后，在 `chrome://extensions/` 中点击扩展卡片的“重新加载”，然后刷新 ChatGPT 页面。
 
----
+建议用下面几类内容测试导出结果：
 
-## 常见问题（FAQ）
+- 包含 `/agent`、`.bib`、`services/` 等行内代码的段落。
+- 多行代码块和带语言标识的代码块。
+- 有序列表、无序列表、嵌套列表。
+- 表格、链接、引用、数学公式。
 
-**Q: 按钮点了没有反应？**  
-A: 先确保你**在目标回答内有选区**（任意选择几个字），然后再点击按钮。若仍无效，查看控制台是否有报错。
+语法检查：
 
-**Q: 为什么导出的 Markdown 没有我以为的某些元素？**  
-A: 扩展会清理按钮、表单、svg 等“噪音元素”。若你有特殊需求，可在 `htmlToMd()` 的清理选择器中调整。
+```powershell
+node --check content.js
+```
 
-**Q: 能导出整页对话吗？**  
-A: 当前版本专注“单条回答”。若需要整页对话导出，可在 Issues 中告诉我，我会考虑加入可选菜单。
+manifest 检查：
 
----
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest ok')"
+```
+
+## 权限说明
+
+- `clipboardWrite`：用于把导出的 Markdown 写入剪贴板。
+- `host_permissions`：仅匹配 `chatgpt.com` 和 `chat.openai.com`。
+
+扩展不收集、不上传、不存储你的对话数据。所有转换都在当前浏览器页面本地完成。
+
+## 项目结构
+
+```text
+chatgpt-md-fab/
+├── manifest.json
+├── content.js
+├── README.md
+├── LICENSE
+└── images/
+    ├── demo.gif
+    ├── demo1.gif
+    ├── md_icon.png
+    └── pay_tool.png
+```
 
 ## 版本历史
 
-- **1.1.2**  
-  - 新增：Toast 提示（2 秒自动消失）；  
-  - 新增：拖拽后抑制点击，避免误触提示；  
-  - 保持：深色主题、美化圆形按钮、悬停展开、可拖拽/记忆位置。
+### 1.2.0
+
+- 修复行内代码被导出为 `%60...%60` 的问题。
+- 优化 ChatGPT 新版代码块 DOM 的提取逻辑。
+- 改进列表、表格、引用、公式等 Markdown 转换。
+- 增加剪贴板写入兜底逻辑。
+- 修复 README 和 manifest 编码乱码。
+
+### 1.1.2
+
+- 增加 Toast 提示。
+- 支持拖动悬浮按钮并记忆位置。
+- 支持选中回答后导出 Markdown。
+
+## License
+
+MIT License
 
 ---
 
-## 许可协议
+# English
 
-推荐：MIT License（如需改为其他协议，可自行替换）。
+[Back to Chinese](#chatgpt-answer-to-markdown-fab)
+
+ChatGPT Answer to Markdown (FAB) is a Chrome Manifest V3 extension. It injects a draggable `MD` floating action button into ChatGPT pages. Select any text inside a target assistant answer, click the button, and the extension copies and downloads the whole answer as clean Markdown.
+
+## Features
+
+- Export the whole assistant answer after selecting any text inside it.
+- Copy Markdown to the clipboard and download a `*-selected-answer.md` file.
+- Preserve common Markdown structures: headings, paragraphs, bold, italic, inline code, code blocks, blockquotes, lists, horizontal rules, tables, images, and links.
+- Support ChatGPT's current CodeMirror-style code block DOM and avoid copying UI noise such as copy buttons and code block toolbars.
+- Support KaTeX formulas: display formulas as `$$...$$` and inline formulas as `$...$`.
+- Draggable floating button with position persistence.
+- Fully local conversion. No conversation data is uploaded, collected, or stored.
+
+## What Was Fixed
+
+The main issue was in the HTML-to-Markdown conversion logic in `content.js`:
+
+- Inline code used to be exported as `%60/agent%60`; it is now exported as standard Markdown: `` `/agent` ``.
+- Newer ChatGPT code blocks use deeply nested CodeMirror DOM. The converter now extracts the real code text before generating fenced code blocks.
+- `<br>` inside code blocks is now preserved as a newline.
+- Table cells now escape `|` and normalize newlines.
+- README and manifest encoding issues were cleaned up.
+
+## Installation
+
+1. Open Chrome and go to `chrome://extensions/`.
+2. Enable Developer mode.
+3. Click "Load unpacked".
+4. Select this project folder.
+5. Open or refresh `https://chatgpt.com/`.
+
+## Usage
+
+1. Select any text inside the target assistant answer.
+2. Click the `MD` button in the bottom-right corner.
+3. The extension converts the whole assistant answer to Markdown, copies it to the clipboard, and downloads a `.md` file.
+
+If no assistant answer text is selected, the extension shows a Toast reminder.
+
+## GitHub Badges And Stats
+
+Before publishing this repository, replace every `OWNER/REPO` placeholder in this README with your actual GitHub repository path, for example:
+
+```text
+your-name/chatgpt-md-fab
+```
+
+This README includes common GitHub project badges:
+
+| Badge | Meaning |
+| --- | --- |
+| Version | Current extension version |
+| Manifest V3 | Chrome extension platform |
+| License | Open-source license |
+| Stars | GitHub stars |
+| Forks | GitHub forks |
+| Issues | Open GitHub issues |
+| Last commit | Latest commit activity |
+| Release | Latest GitHub release |
+| Downloads | Total release downloads |
+
+Optional Star History chart:
+
+```markdown
+[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
+```
+
+Optional Chrome Web Store badges:
+
+```markdown
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID)](https://chromewebstore.google.com/detail/EXTENSION_ID)
+[![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/EXTENSION_ID)](https://chromewebstore.google.com/detail/EXTENSION_ID)
+```
+
+## Conversion Rules
+
+| HTML / ChatGPT DOM | Markdown Output |
+| --- | --- |
+| `h1` - `h6` | `#` - `######` |
+| `p` | Paragraph |
+| `strong` / `b` | `**text**` |
+| `em` / `i` | `*text*` |
+| `code` | `` `code` `` |
+| `pre` / CodeMirror code block | fenced code block |
+| `blockquote` | `> quote` |
+| `ul` / `ol` | `- item` / `1. item` |
+| `table` | Markdown table |
+| `.katex-display` | `$$...$$` |
+| `.katex` | `$...$` |
+
+## Development
+
+After editing the code, reload the extension in `chrome://extensions/`, then refresh the ChatGPT page.
+
+Recommended test cases:
+
+- Paragraphs containing inline code such as `/agent`, `.bib`, and `services/`.
+- Multi-line code blocks and language-tagged code blocks.
+- Ordered lists, unordered lists, and nested lists.
+- Tables, links, blockquotes, and math formulas.
+
+Syntax check:
+
+```powershell
+node --check content.js
+```
+
+Manifest check:
+
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest ok')"
+```
+
+## Permissions
+
+- `clipboardWrite`: writes exported Markdown to the clipboard.
+- `host_permissions`: only matches `chatgpt.com` and `chat.openai.com`.
+
+The extension does not collect, upload, or store your conversation data.
+
+## Project Structure
+
+```text
+chatgpt-md-fab/
+├── manifest.json
+├── content.js
+├── README.md
+├── LICENSE
+└── images/
+    ├── demo.gif
+    ├── demo1.gif
+    ├── md_icon.png
+    └── pay_tool.png
+```
+
+## Changelog
+
+### 1.2.0
+
+- Fixed inline code exported as `%60...%60`.
+- Improved extraction for newer ChatGPT code block DOM.
+- Improved Markdown conversion for lists, tables, blockquotes, and formulas.
+- Added clipboard fallback.
+- Fixed README and manifest encoding issues.
+
+### 1.1.2
+
+- Added Toast notifications.
+- Added draggable floating button with persisted position.
+- Supported Markdown export for selected assistant answers.
+
+## License
+
+MIT License
