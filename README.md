@@ -2,17 +2,15 @@
 
 > 中文 | [English](#english)
 
-<!-- Replace OWNER/REPO with your GitHub repository path, for example: Aluo123/chatgpt-md-fab -->
-
 [![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./manifest.json)
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/OWNER/REPO?style=social)](https://github.com/OWNER/REPO/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/OWNER/REPO?style=social)](https://github.com/OWNER/REPO/forks)
-[![GitHub issues](https://img.shields.io/github/issues/OWNER/REPO)](https://github.com/OWNER/REPO/issues)
-[![GitHub last commit](https://img.shields.io/github/last-commit/OWNER/REPO)](https://github.com/OWNER/REPO/commits/main)
-[![GitHub release](https://img.shields.io/github/v/release/OWNER/REPO?include_prereleases)](https://github.com/OWNER/REPO/releases)
-[![GitHub downloads](https://img.shields.io/github/downloads/OWNER/REPO/total)](https://github.com/OWNER/REPO/releases)
+[![GitHub stars](https://img.shields.io/github/stars/xiuluo211314/chatgpt-md-fab?style=social)](https://github.com/xiuluo211314/chatgpt-md-fab/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/xiuluo211314/chatgpt-md-fab?style=social)](https://github.com/xiuluo211314/chatgpt-md-fab/forks)
+[![GitHub issues](https://img.shields.io/github/issues/xiuluo211314/chatgpt-md-fab)](https://github.com/xiuluo211314/chatgpt-md-fab/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/xiuluo211314/chatgpt-md-fab)](https://github.com/xiuluo211314/chatgpt-md-fab/commits/main)
+[![GitHub release](https://img.shields.io/github/v/release/xiuluo211314/chatgpt-md-fab?include_prereleases)](https://github.com/xiuluo211314/chatgpt-md-fab/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/xiuluo211314/chatgpt-md-fab/total)](https://github.com/xiuluo211314/chatgpt-md-fab/releases)
 
 一个 Chrome MV3 扩展：在 ChatGPT 页面右下角注入一个可拖动的 `MD` 悬浮按钮。你只需要在目标助手回答里选中任意一小段文字，点击按钮，就可以把整条回答复制并下载为干净的 Markdown。
 
@@ -70,10 +68,10 @@
 
 ## GitHub 统计与展示
 
-上传到 GitHub 后，建议把 README 顶部的 `OWNER/REPO` 全部替换成你的真实仓库路径，例如：
+当前仓库地址：
 
 ```text
-your-name/chatgpt-md-fab
+xiuluo211314/chatgpt-md-fab
 ```
 
 当前 README 已预置这些主流 GitHub 展示信息：
@@ -92,9 +90,7 @@ your-name/chatgpt-md-fab
 
 你也可以在 README 末尾加入 Star History 图，用于展示项目增长趋势：
 
-```markdown
-[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
-```
+[![Star History Chart](https://api.star-history.com/svg?repos=xiuluo211314/chatgpt-md-fab&type=Date)](https://star-history.com/#xiuluo211314/chatgpt-md-fab&Date)
 
 如果后续发布到 Chrome Web Store，还可以追加：
 
@@ -230,11 +226,7 @@ If no assistant answer text is selected, the extension shows a Toast reminder.
 
 ## GitHub Badges And Stats
 
-Before publishing this repository, replace every `OWNER/REPO` placeholder in this README with your actual GitHub repository path, for example:
-
-```text
-your-name/chatgpt-md-fab
-```
+Repository: [xiuluo211314/chatgpt-md-fab](https://github.com/xiuluo211314/chatgpt-md-fab)
 
 This README includes common GitHub project badges:
 
@@ -252,9 +244,7 @@ This README includes common GitHub project badges:
 
 Optional Star History chart:
 
-```markdown
-[![Star History Chart](https://api.star-history.com/svg?repos=OWNER/REPO&type=Date)](https://star-history.com/#OWNER/REPO&Date)
-```
+[![Star History Chart](https://api.star-history.com/svg?repos=xiuluo211314/chatgpt-md-fab&type=Date)](https://star-history.com/#xiuluo211314/chatgpt-md-fab&Date)
 
 Optional Chrome Web Store badges:
 
