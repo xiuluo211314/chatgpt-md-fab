@@ -3,6 +3,10 @@
   window.__chatgpt_md_fab_injected__ = true;
 
   const STORE_KEY = "__chatgpt_md_fab_pos__";
+  const OPTIONS = {
+    // Set to true if you also want an .md file download after copying.
+    downloadAfterCopy: false
+  };
 
   const theme = (() => {
     const isDark = document.documentElement.classList.contains("dark")
@@ -417,8 +421,16 @@
       }
 
       const copied = await copyToClipboard(markdown);
-      downloadText(`${sanitizeTitle(document.title)}-selected-answer.md`, markdown);
-      toast(copied ? "已复制并下载 Markdown。" : "已下载 Markdown，但剪贴板写入失败。", copied ? "info" : "warn", 2200);
+      if (OPTIONS.downloadAfterCopy) {
+        downloadText(`${sanitizeTitle(document.title)}-selected-answer.md`, markdown);
+      }
+      toast(
+        copied
+          ? (OPTIONS.downloadAfterCopy ? "已复制并下载 Markdown。" : "已复制 Markdown。")
+          : (OPTIONS.downloadAfterCopy ? "已下载 Markdown，但剪贴板写入失败。" : "剪贴板写入失败。"),
+        copied ? "info" : "warn",
+        2200
+      );
       clearSelection();
     } catch (err) {
       toast(`执行异常：${err?.message || err}`, "error", 2800);

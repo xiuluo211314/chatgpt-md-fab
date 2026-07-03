@@ -2,7 +2,7 @@
 
 > 中文 | [English](#english)
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](./manifest.json)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](./manifest.json)
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/xiuluo211314/chatgpt-md-fab?style=social)](https://github.com/xiuluo211314/chatgpt-md-fab/stargazers)
@@ -12,7 +12,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/xiuluo211314/chatgpt-md-fab?include_prereleases)](https://github.com/xiuluo211314/chatgpt-md-fab/releases)
 [![GitHub downloads](https://img.shields.io/github/downloads/xiuluo211314/chatgpt-md-fab/total)](https://github.com/xiuluo211314/chatgpt-md-fab/releases)
 
-一个 Chrome MV3 扩展：在 ChatGPT 页面右下角注入一个可拖动的 `MD` 悬浮按钮。你只需要在目标助手回答里选中任意一小段文字，点击按钮，就可以把整条回答复制并下载为干净的 Markdown。
+一个 Chrome MV3 扩展：在 ChatGPT 页面右下角注入一个可拖动的 `MD` 悬浮按钮。你只需要在目标助手回答里选中任意一小段文字，点击按钮，就可以把整条回答复制为干净的 Markdown。默认只复制，不自动下载文件。
 
 ![Demo](./images/demo.gif)
 
@@ -22,6 +22,7 @@
 - [本次修复重点](#本次修复重点)
 - [安装](#安装)
 - [使用](#使用)
+- [配置](#配置)
 - [GitHub 统计与展示](#github-统计与展示)
 - [转换规则](#转换规则)
 - [开发与调试](#开发与调试)
@@ -33,7 +34,8 @@
 ## 功能
 
 - 选中任意助手回答后，一键导出整条回答，而不是只导出选中的片段。
-- 自动复制到剪贴板，并下载 `*-selected-answer.md` 文件。
+- 自动复制到剪贴板，默认不下载文件。
+- 可通过配置项开启 `*-selected-answer.md` 文件下载。
 - 保留常见 Markdown 结构：标题、段落、加粗、斜体、行内代码、代码块、引用、列表、分割线、表格、图片、链接。
 - 支持 ChatGPT 当前 CodeMirror 风格代码块 DOM，避免把复制按钮、代码块标题栏等 UI 噪声写入 Markdown。
 - 支持 KaTeX 公式：块级公式导出为 `$$...$$`，行内公式导出为 `$...$`。
@@ -62,9 +64,27 @@
 
 1. 在 ChatGPT 的目标助手回答中，用鼠标选中任意几个字。
 2. 点击页面右下角的 `MD` 按钮。
-3. 扩展会把整条助手回答转换为 Markdown，复制到剪贴板，并下载一个 `.md` 文件。
+3. 扩展会把整条助手回答转换为 Markdown，并复制到剪贴板。
 
 如果没有选中助手回答中的文字，按钮会用 Toast 提示你先选中目标回答。
+
+## 配置
+
+默认点击 `MD` 后只复制 Markdown，不下载文件。如果你也希望同时下载 `.md` 文件，可以在 `content.js` 顶部修改配置：
+
+```js
+const OPTIONS = {
+  downloadAfterCopy: true
+};
+```
+
+默认配置如下：
+
+```js
+const OPTIONS = {
+  downloadAfterCopy: false
+};
+```
 
 ## GitHub 统计与展示
 
@@ -162,6 +182,11 @@ chatgpt-md-fab/
 
 ## 版本历史
 
+### 1.2.1
+
+- 默认点击 `MD` 后只复制 Markdown，不自动下载文件。
+- 新增 `OPTIONS.downloadAfterCopy` 配置项，可手动开启 `.md` 文件下载。
+
 ### 1.2.0
 
 - 修复行内代码被导出为 `%60...%60` 的问题。
@@ -186,12 +211,13 @@ MIT License
 
 [Back to Chinese](#chatgpt-answer-to-markdown-fab)
 
-ChatGPT Answer to Markdown (FAB) is a Chrome Manifest V3 extension. It injects a draggable `MD` floating action button into ChatGPT pages. Select any text inside a target assistant answer, click the button, and the extension copies and downloads the whole answer as clean Markdown.
+ChatGPT Answer to Markdown (FAB) is a Chrome Manifest V3 extension. It injects a draggable `MD` floating action button into ChatGPT pages. Select any text inside a target assistant answer, click the button, and the extension copies the whole answer as clean Markdown. File download is disabled by default.
 
 ## Features
 
 - Export the whole assistant answer after selecting any text inside it.
-- Copy Markdown to the clipboard and download a `*-selected-answer.md` file.
+- Copy Markdown to the clipboard. File download is disabled by default.
+- Optionally enable `*-selected-answer.md` downloads through configuration.
 - Preserve common Markdown structures: headings, paragraphs, bold, italic, inline code, code blocks, blockquotes, lists, horizontal rules, tables, images, and links.
 - Support ChatGPT's current CodeMirror-style code block DOM and avoid copying UI noise such as copy buttons and code block toolbars.
 - Support KaTeX formulas: display formulas as `$$...$$` and inline formulas as `$...$`.
@@ -220,9 +246,27 @@ The main issue was in the HTML-to-Markdown conversion logic in `content.js`:
 
 1. Select any text inside the target assistant answer.
 2. Click the `MD` button in the bottom-right corner.
-3. The extension converts the whole assistant answer to Markdown, copies it to the clipboard, and downloads a `.md` file.
+3. The extension converts the whole assistant answer to Markdown and copies it to the clipboard.
 
 If no assistant answer text is selected, the extension shows a Toast reminder.
+
+## Configuration
+
+By default, clicking `MD` only copies Markdown and does not download a file. To also download a `.md` file, change the option near the top of `content.js`:
+
+```js
+const OPTIONS = {
+  downloadAfterCopy: true
+};
+```
+
+Default configuration:
+
+```js
+const OPTIONS = {
+  downloadAfterCopy: false
+};
+```
 
 ## GitHub Badges And Stats
 
@@ -315,6 +359,11 @@ chatgpt-md-fab/
 ```
 
 ## Changelog
+
+### 1.2.1
+
+- Changed the default action to copy Markdown only.
+- Added `OPTIONS.downloadAfterCopy` for optional `.md` file downloads.
 
 ### 1.2.0
 

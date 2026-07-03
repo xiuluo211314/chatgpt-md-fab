@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Answer to Markdown (FAB)",
-  "version": "1.2.0",
-  "description": "Injects a draggable MD floating button on ChatGPT pages to copy and download the selected assistant answer as clean Markdown.",
+  "version": "1.2.1",
+  "description": "Injects a draggable MD floating button on ChatGPT pages to copy the selected assistant answer as clean Markdown. Optional download is configurable.",
   "permissions": [
     "clipboardWrite"
   ],
