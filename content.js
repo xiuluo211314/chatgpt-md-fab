@@ -40,6 +40,8 @@
     if (!host) {
       host = document.createElement("div");
       host.className = "gpt-md-toast-host";
+      host.setAttribute("role", "status");
+      host.setAttribute("aria-live", "polite");
 
       const style = document.createElement("style");
       style.textContent = `
@@ -55,8 +57,9 @@
         }
         .gpt-md-toast {
           pointer-events: auto;
-          min-width: 220px;
-          max-width: 420px;
+          box-sizing: border-box;
+          min-width: min(220px, calc(100vw - 40px));
+          max-width: min(420px, calc(100vw - 40px));
           background: ${theme.bg};
           color: ${theme.text};
           border: 1px solid ${theme.border};
@@ -119,264 +122,31 @@
     });
   }
 
-  function toElement(node) {
-    return node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-  }
-
-  function getAssistantContainer() {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
-
-    const range = selection.getRangeAt(0);
-    const start = toElement(range.startContainer);
-    const end = toElement(range.endContainer);
-    const common = toElement(range.commonAncestorContainer);
-
-    const selectors = [
-      '[data-message-author-role="assistant"]',
-      'section[data-turn="assistant"]',
-      '[data-testid^="conversation-turn-"]'
-    ].join(",");
-
-    return start?.closest?.(selectors)
-      || end?.closest?.(selectors)
-      || common?.closest?.(selectors)
-      || null;
-  }
-
-  function pickContentElement(container) {
-    if (!container) return null;
-    return container.querySelector('[data-message-author-role="assistant"] .markdown')
-      || container.querySelector(".markdown")
-      || container.querySelector('[data-message-author-role="assistant"]')
-      || container;
-  }
-
-  function normalizeNewlines(value) {
-    return (value || "").replace(/\r\n?/g, "\n");
-  }
-
-  function collapseBlankLines(value) {
-    return normalizeNewlines(value)
-      .replace(/[ \t]+\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-  }
-
-  function escapeInlineCode(value) {
-    const text = normalizeNewlines(value).replace(/\s+/g, " ").trim();
-    if (!text) return "";
-    const ticks = text.match(/`+/g) || [];
-    const fence = "`".repeat(Math.max(1, ...ticks.map(t => t.length)) + 1);
-    return `${fence}${text}${fence}`;
-  }
-
-  function fenceFor(code) {
-    const ticks = code.match(/`+/g) || [];
-    return "`".repeat(Math.max(3, ...ticks.map(t => t.length + 1)));
-  }
-
-  function textWithBreaks(node) {
-    if (!node) return "";
-    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
-    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-
-    const tag = node.tagName.toLowerCase();
-    if (tag === "br") return "\n";
-
-    return Array.from(node.childNodes).map(textWithBreaks).join("");
-  }
-
-  function detectLanguage(pre, code) {
-    const className = `${pre.className || ""} ${code?.className || ""}`;
-    const classMatch = className.match(/(?:language|lang)-([\w#+.-]+)/i);
-    if (classMatch) return classMatch[1].toLowerCase();
-
-    const label = Array.from(pre.querySelectorAll("div,span"))
-      .filter(el => !el.closest("code"))
-      .map(el => (el.childElementCount <= 2 ? el.textContent.trim() : ""))
-      .find(text => /^[a-z][\w#+.-]{0,24}$/i.test(text) && !/^(copy|复制|copied|已复制)$/i.test(text));
-
-    return label ? label.toLowerCase() : "";
-  }
-
-  function extractCodeBlock(pre) {
-    const code = pre.querySelector("pre.cm-content code, .cm-content code, code");
-    const source = code || pre;
-    const text = textWithBreaks(source).replace(/\u00a0/g, " ").replace(/\n+$/g, "");
-    return {
-      lang: detectLanguage(pre, code),
-      text
-    };
-  }
-
-  function escapeTableCell(value) {
-    return collapseBlankLines(value)
-      .replace(/\|/g, "\\|")
-      .replace(/\n/g, "<br>");
-  }
-
-  function htmlToMarkdown(root) {
-    const tmp = root.cloneNode(true);
-
-    const codeBlocks = [];
-    Array.from(tmp.querySelectorAll("pre"))
-      .filter(pre => !pre.parentElement?.closest("pre"))
-      .forEach(pre => {
-        const key = `\n\n__CODE_BLOCK_${codeBlocks.length}__\n\n`;
-        codeBlocks.push(extractCodeBlock(pre));
-        pre.replaceWith(document.createTextNode(key));
-      });
-
-    const mathBlocks = [];
-    Array.from(tmp.querySelectorAll(".katex-display")).forEach(el => {
-      const tex = el.querySelector('annotation[encoding="application/x-tex"]')?.textContent?.trim() || "";
-      const key = `__MATH_BLOCK_${mathBlocks.length}__`;
-      mathBlocks.push(tex);
-      el.replaceWith(document.createTextNode(key));
-    });
-
-    const mathInlines = [];
-    Array.from(tmp.querySelectorAll(".katex:not(.katex-display)")).forEach(el => {
-      const tex = el.querySelector('annotation[encoding="application/x-tex"]')?.textContent?.trim() || "";
-      const key = `__MATH_INLINE_${mathInlines.length}__`;
-      mathInlines.push(tex);
-      el.replaceWith(document.createTextNode(key));
-    });
-
-    Array.from(tmp.querySelectorAll([
-      "button",
-      "svg",
-      "form",
-      "nav",
-      "header",
-      "footer",
-      "[contenteditable]",
-      ".sr-only",
-      "[aria-hidden='true']",
-      "[data-testid='copy-turn-action-button']"
-    ].join(","))).forEach(el => el.remove());
-
-    function inline(node) {
-      return Array.from(node.childNodes).map(walk).join("");
-    }
-
-    function block(node) {
-      return Array.from(node.childNodes).map(walk).join("");
-    }
-
-    function listItem(li, depth) {
-      const childLists = Array.from(li.children).filter(child => /^(ul|ol)$/i.test(child.tagName));
-      const clone = li.cloneNode(true);
-      Array.from(clone.children).filter(child => /^(ul|ol)$/i.test(child.tagName)).forEach(child => child.remove());
-
-      const main = collapseBlankLines(block(clone)).replace(/\n/g, `\n${"  ".repeat(depth + 1)}`);
-      const nested = childLists.map(list => listMarkdown(list, depth + 1)).join("");
-      return main + nested;
-    }
-
-    function listMarkdown(list, depth = 0) {
-      const ordered = list.tagName.toLowerCase() === "ol";
-      let index = Number.parseInt(list.getAttribute("start") || "1", 10);
-      if (!Number.isFinite(index)) index = 1;
-
-      const rows = Array.from(list.children)
-        .filter(child => child.tagName?.toLowerCase() === "li")
-        .map(li => {
-          const marker = ordered ? `${index++}. ` : "- ";
-          return `${"  ".repeat(depth)}${marker}${listItem(li, depth)}`;
-        });
-
-      return `\n${rows.join("\n")}\n`;
-    }
-
-    function tableMarkdown(table) {
-      const rows = Array.from(table.querySelectorAll("tr")).map(tr =>
-        Array.from(tr.children).map(cell => escapeTableCell(block(cell)))
-      ).filter(row => row.length);
-
-      if (!rows.length) return "";
-      const width = Math.max(...rows.map(row => row.length));
-      const normalized = rows.map(row => Array.from({ length: width }, (_, i) => row[i] || ""));
-      const header = normalized[0];
-      const separator = header.map(() => "---");
-      const body = normalized.slice(1);
-
-      return [
-        `| ${header.join(" | ")} |`,
-        `| ${separator.join(" | ")} |`,
-        ...body.map(row => `| ${row.join(" | ")} |`)
-      ].join("\n");
-    }
-
-    function walk(node) {
-      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
-      if (node.nodeType !== Node.ELEMENT_NODE) return "";
-
-      const tag = node.tagName.toLowerCase();
-      if (tag === "br") return "\n";
-      if (/^h[1-6]$/.test(tag)) return `\n\n${"#".repeat(Number(tag[1]))} ${collapseBlankLines(inline(node))}\n\n`;
-      if (tag === "p") return `\n\n${collapseBlankLines(inline(node))}\n\n`;
-      if (tag === "strong" || tag === "b") return `**${inline(node)}**`;
-      if (tag === "em" || tag === "i") return `*${inline(node)}*`;
-      if (tag === "del" || tag === "s") return `~~${inline(node)}~~`;
-      if (tag === "code") return escapeInlineCode(node.textContent || "");
-      if (tag === "blockquote") {
-        const quoted = collapseBlankLines(block(node)).split("\n").map(line => `> ${line}`).join("\n");
-        return `\n\n${quoted}\n\n`;
-      }
-      if (tag === "ul" || tag === "ol") return listMarkdown(node);
-      if (tag === "li") return listItem(node, 0);
-      if (tag === "hr") return "\n\n---\n\n";
-      if (tag === "a") {
-        const href = node.getAttribute("href") || "";
-        const text = collapseBlankLines(inline(node)) || href;
-        return href && text !== href ? `[${text}](${href})` : text;
-      }
-      if (tag === "img") {
-        const src = node.getAttribute("src") || "";
-        const alt = node.getAttribute("alt") || "";
-        return src ? `![${alt}](${src})` : "";
-      }
-      if (tag === "table") return `\n\n${tableMarkdown(node)}\n\n`;
-
-      return block(node);
-    }
-
-    let markdown = collapseBlankLines(block(tmp));
-
-    codeBlocks.forEach((code, index) => {
-      const fence = fenceFor(code.text);
-      const lang = code.lang ? code.lang.replace(/[^\w#+.-]/g, "") : "";
-      const blockText = `${fence}${lang}\n${normalizeNewlines(code.text)}\n${fence}`;
-      markdown = markdown.replace(`__CODE_BLOCK_${index}__`, blockText);
-    });
-
-    mathBlocks.forEach((tex, index) => {
-      markdown = markdown.replace(`__MATH_BLOCK_${index}__`, `$$\n${tex}\n$$`);
-    });
-
-    mathInlines.forEach((tex, index) => {
-      markdown = markdown.replace(`__MATH_INLINE_${index}__`, `$${tex}$`);
-    });
-
-    return collapseBlankLines(markdown);
-  }
+  const { htmlToMarkdown, resolveSelection } = globalThis.ChatGPTMarkdown;
 
   async function copyToClipboard(text) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
+      const selection = window.getSelection();
+      const ranges = selection ? Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i).cloneRange()) : [];
+      const active = document.activeElement;
       const textarea = document.createElement("textarea");
       textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
+      textarea.style.cssText = "position:fixed;left:-9999px;top:0";
       document.body.appendChild(textarea);
-      textarea.select();
-      const ok = document.execCommand("copy");
-      textarea.remove();
-      return ok;
+      try {
+        textarea.select();
+        return document.execCommand("copy");
+      } catch {
+        return false;
+      } finally {
+        textarea.remove();
+        active?.focus?.({ preventScroll: true });
+        selection?.removeAllRanges();
+        ranges.forEach(range => selection?.addRange(range));
+      }
     }
   }
 
@@ -386,8 +156,10 @@
     const link = document.createElement("a");
     link.download = filename;
     link.href = url;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   function sanitizeTitle(value) {
@@ -400,23 +172,26 @@
     } catch {}
   }
 
-  async function handleSelectedAnswerToMarkdown() {
+  let exporting = false;
+
+  async function handleSelectedAnswerToMarkdown(button, target) {
+    if (exporting) return;
     try {
-      const container = getAssistantContainer();
-      if (!container) {
-        toast("请先在目标回答中选中任意文字，再点击 MD。", "warn", 2000);
+      const answer = target || resolveSelection(window.getSelection());
+      if (answer.status !== "ok" || !answer.turn.isConnected) {
+        const messages = {
+          "multiple-answers": "请只在同一条助手回答内选择文字。",
+          "not-assistant": "请选中助手回答中的文字，不能选择用户消息。"
+        };
+        toast(messages[answer.status] || "请先在目标回答中选中任意文字，再点击 MD。", "warn");
         return;
       }
 
-      const content = pickContentElement(container);
-      if (!content) {
-        toast("未找到回答内容容器，ChatGPT 页面结构可能已更新。", "error", 2200);
-        return;
-      }
-
-      const markdown = htmlToMarkdown(content);
+      exporting = true;
+      button.setAttribute("aria-busy", "true");
+      const markdown = answer.roots.map(htmlToMarkdown).filter(Boolean).join("\n\n");
       if (!markdown) {
-        toast("选中的回答内容为空。", "warn", 2000);
+        toast("选中的回答内容为空。", "warn");
         return;
       }
 
@@ -427,13 +202,16 @@
       toast(
         copied
           ? (OPTIONS.downloadAfterCopy ? "已复制并下载 Markdown。" : "已复制 Markdown。")
-          : (OPTIONS.downloadAfterCopy ? "已下载 Markdown，但剪贴板写入失败。" : "剪贴板写入失败。"),
+          : (OPTIONS.downloadAfterCopy ? "已下载 Markdown，但剪贴板写入失败。" : "剪贴板写入失败，请重试。"),
         copied ? "info" : "warn",
         2200
       );
-      clearSelection();
+      if (copied) clearSelection();
     } catch (err) {
       toast(`执行异常：${err?.message || err}`, "error", 2800);
+    } finally {
+      exporting = false;
+      button.removeAttribute("aria-busy");
     }
   }
 
@@ -445,49 +223,29 @@
         right: 20px;
         bottom: 20px;
         z-index: 999999;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
+        box-sizing: border-box;
+        display: grid;
+        place-items: center;
         height: 56px;
         width: 56px;
-        padding: 0 18px;
-        border-radius: 999px;
+        padding: 0;
+        border-radius: 50%;
         border: 1px solid ${theme.border};
         background: ${theme.bg};
         color: ${theme.text};
         box-shadow: ${theme.shadow};
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
         cursor: pointer;
         user-select: none;
-        transition: width .18s ease, background .18s ease, right .2s ease, bottom .2s ease;
-        font: 700 14px/1.1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        touch-action: none;
+        font: 700 14px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        letter-spacing: 0;
       }
-      .gpt-md-fab:hover {
-        background: ${theme.bgHover};
-        width: 176px;
-      }
-      .gpt-md-fab__icon {
-        flex: 0 0 auto;
-        width: 26px;
-        height: 26px;
-        border-radius: 7px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.08));
-        border: 1px solid ${theme.border};
-        box-shadow: inset 0 1px 1px rgba(255,255,255,.04);
-        letter-spacing: .5px;
-      }
-      .gpt-md-fab__label {
-        white-space: nowrap;
-        opacity: 0;
-        transform: translateX(-4px);
-        transition: opacity .18s ease, transform .18s ease;
-      }
-      .gpt-md-fab:hover .gpt-md-fab__label {
-        opacity: 1;
-        transform: translateX(0);
+      .gpt-md-fab:hover { background: ${theme.bgHover}; }
+      .gpt-md-fab:focus-visible { outline: 2px solid ${theme.info}; outline-offset: 3px; }
+      .gpt-md-fab[aria-busy="true"] { cursor: progress; opacity: .7; }
+      .gpt-md-fab__icon { pointer-events: none; }
+      @media (prefers-reduced-motion: reduce) {
+        .gpt-md-toast { transition: none; }
       }
     `;
     document.documentElement.appendChild(style);
@@ -499,95 +257,87 @@
     const button = document.createElement("button");
     button.className = "gpt-md-fab";
     button.type = "button";
-    button.title = "选中回答，导出 Markdown";
+    button.title = "选中助手回答中的文字，复制整条回答为 Markdown；拖动可调整位置";
+    button.setAttribute("aria-label", "复制选中的助手回答为 Markdown");
 
     const icon = document.createElement("span");
     icon.className = "gpt-md-fab__icon";
     icon.textContent = "MD";
     button.appendChild(icon);
 
-    const label = document.createElement("span");
-    label.className = "gpt-md-fab__label";
-    label.textContent = "导出 Markdown";
-    button.appendChild(label);
-
-    let dragging = false;
-    let moved = false;
+    let drag = null;
     let suppressClick = false;
-    let startX = 0;
-    let startY = 0;
-    let startRight = 0;
-    let startBottom = 0;
-    const dragThreshold = 6;
+    let selectedAnswer = null;
 
-    const savePos = () => {
-      const rect = button.getBoundingClientRect();
-      const right = Math.max(10, window.innerWidth - rect.right);
-      const bottom = Math.max(10, window.innerHeight - rect.bottom);
-      localStorage.setItem(STORE_KEY, JSON.stringify({ right, bottom }));
+    const clampPosition = (right, bottom) => {
+      const margin = 6;
+      button.style.right = `${Math.max(margin, Math.min(right, window.innerWidth - 56 - margin))}px`;
+      button.style.bottom = `${Math.max(margin, Math.min(bottom, window.innerHeight - 56 - margin))}px`;
     };
 
-    const restorePos = () => {
+    const savePos = () => {
       try {
-        const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
-        if (!value) return;
-        if (typeof value.right === "number") button.style.right = `${value.right}px`;
-        if (typeof value.bottom === "number") button.style.bottom = `${value.bottom}px`;
+        localStorage.setItem(STORE_KEY, JSON.stringify({
+          right: Number.parseFloat(button.style.right) || 20,
+          bottom: Number.parseFloat(button.style.bottom) || 20
+        }));
       } catch {}
     };
 
     button.addEventListener("pointerdown", event => {
-      if (event.button !== 0) return;
-      dragging = true;
-      moved = false;
+      if (event.button !== 0 || !event.isPrimary) return;
+      selectedAnswer = resolveSelection(window.getSelection());
+      suppressClick = false;
+      const rect = button.getBoundingClientRect();
+      drag = {
+        id: event.pointerId, x: event.clientX, y: event.clientY,
+        right: window.innerWidth - rect.right, bottom: window.innerHeight - rect.bottom,
+        moved: false
+      };
       button.setPointerCapture(event.pointerId);
-      startX = event.clientX;
-      startY = event.clientY;
-      startRight = Number.parseFloat(getComputedStyle(button).right);
-      startBottom = Number.parseFloat(getComputedStyle(button).bottom);
-      button.style.width = "56px";
       event.preventDefault();
     });
 
-    window.addEventListener("pointermove", event => {
-      if (!dragging) return;
-      const dx = event.clientX - startX;
-      const dy = event.clientY - startY;
-      if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) moved = true;
-      button.style.right = `${Math.max(6, startRight - dx)}px`;
-      button.style.bottom = `${Math.max(6, startBottom - dy)}px`;
+    button.addEventListener("pointermove", event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (Math.hypot(dx, dy) > 6) drag.moved = true;
+      if (drag.moved) clampPosition(drag.right - dx, drag.bottom - dy);
     });
 
-    window.addEventListener("pointerup", event => {
-      if (!dragging) return;
-      dragging = false;
-      button.releasePointerCapture?.(event.pointerId);
-      savePos();
-      if (moved) {
+    const finishDrag = event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      suppressClick = drag.moved || event.type === "pointercancel";
+      if (drag.moved) savePos();
+      drag = null;
+      if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+    };
+    button.addEventListener("pointerup", finishDrag);
+    button.addEventListener("pointercancel", finishDrag);
+    button.addEventListener("lostpointercapture", event => {
+      if (drag?.id === event.pointerId) {
+        drag = null;
         suppressClick = true;
-        setTimeout(() => {
-          suppressClick = false;
-        }, 120);
+        selectedAnswer = null;
       }
-      setTimeout(() => {
-        button.style.width = "";
-      }, 50);
     });
 
-    button.addEventListener("click", () => {
-      if (!suppressClick) handleSelectedAnswerToMarkdown();
+    button.addEventListener("click", event => {
+      const answer = event.detail === 0 ? null : selectedAnswer;
+      selectedAnswer = null;
+      if (event.detail === 0 || !suppressClick) handleSelectedAnswerToMarkdown(button, answer);
+      suppressClick = false;
     });
 
-    restorePos();
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch {}
+    clampPosition(Number.isFinite(saved?.right) ? saved.right : 20, Number.isFinite(saved?.bottom) ? saved.bottom : 20);
     window.addEventListener("resize", () => {
-      const rect = button.getBoundingClientRect();
-      if (rect.right > window.innerWidth) button.style.right = "20px";
-      if (rect.bottom > window.innerHeight) button.style.bottom = "20px";
+      clampPosition(Number.parseFloat(button.style.right), Number.parseFloat(button.style.bottom));
     });
-
     document.documentElement.appendChild(button);
   }
 
   createFab();
-  clearSelection();
 })();
