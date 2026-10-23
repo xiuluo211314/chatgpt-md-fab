@@ -5,7 +5,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
 function setup(options = {}) {
-  const window = new JSDOM('<section data-turn="assistant"><div data-message-author-role="assistant"><div class="markdown"><p id="answer">Full answer <code>/agent</code></p></div></div></section>', {
+  const window = new JSDOM(options.html || '<section data-turn="assistant"><div data-message-author-role="assistant"><div class="markdown"><p id="answer">Full answer <code>/agent</code></p></div></div></section>', {
     url: 'https://chatgpt.com/c/test', runScripts: 'outside-only', pretendToBeVisual: true
   }).window;
   const { document } = window;
@@ -72,6 +72,21 @@ test('double clicks do not start overlapping clipboard operations', async () => 
     finish();
     await tick();
     assert.equal(app.button.hasAttribute('aria-busy'), false);
+  } finally { app.window.close(); }
+});
+
+test('clicking the FAB copies the current ChatGPT renderer answer without the user message', async () => {
+  const html = fs.readFileSync(path.join(__dirname, 'fixtures/current-chatgpt.html'), 'utf8');
+  const app = setup({ html });
+  try {
+    app.button.click();
+    await tick();
+    assert.equal(app.copies.length, 1);
+    assert.match(app.copies[0], /^## Answer title/);
+    assert.match(app.copies[0], /Selected answer \*\*bold\*\* and \*italic\*/);
+    assert.doesNotMatch(app.copies[0], /User question|Hidden reasoning|Answer toolbar/);
+    assert.equal(app.downloads(), 0);
+    assert.match(app.document.querySelector('.gpt-md-toast').textContent, /已复制 Markdown/);
   } finally { app.window.close(); }
 });
 

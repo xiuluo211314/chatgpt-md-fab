@@ -2,7 +2,7 @@
 
 > 中文 | [English](#english)
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](./manifest.json)
+[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](./manifest.json)
 [![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/xiuluo211314/chatgpt-md-fab?style=social)](https://github.com/xiuluo211314/chatgpt-md-fab/stargazers)
@@ -47,6 +47,10 @@
 
 ## 兼容性与性能
 
+1.3.1 修复新版页面中“已选中助手回答，却提示无法识别”的问题。新版页面使用 `data-chatgpt-search-unit-key` / `data-content-search-unit-key` 的 `:assistant` 后缀，以及 `data-markdown-text-style="assistant-message"`，不再具备旧版的角色属性和 `.markdown` 类。现在兼容这两套结构，并将导出范围限定为当前助手消息，避免把同一轮的问题或其他回答混入。
+
+同时支持新版 `data-d-default-strong` / `data-d-font-style="italic"` 文本标记、`data-code-block` 代码块，以及 `data-markdown-copy="exclude"` 工具栏过滤。已在用户提供的 2026-10-23 完整 HTML 导出上复现旧问题，并验证其中 6 条已加载助手回答均可定位导出、6 条用户消息均被拒绝。回归测试仅保存脱敏后的结构示例，不包含用户完整会话。
+
 1.3.0 保留原有的选中回答后复制流程，并修复以下问题：
 
 - 通过助手角色与 section 定位回答，避免误导出用户消息；跨多条回答选择时提示重新选择。
@@ -60,7 +64,7 @@
 
 转换器直接只读遍历目标回答，移除整棵 DOM 克隆和占位符替换。新增 `markdown.js` 与 UI 逻辑分离，便于测试；无需构建即可加载扩展。
 
-验证范围：自动化测试覆盖合成 DOM 和点击流程；另在用户之前提供的 HTML 样本（3200 个元素）上做了转换与基准验证。当前工具未连接用户的 Chrome，尚未对最新在线 ChatGPT 页面完成端到端验证。ChatGPT 的灰度版本仍可能存在其他 DOM 结构。
+验证范围：自动化测试覆盖新版页面的脱敏结构、旧版 DOM 和点击流程；另在用户提供的新旧 HTML 样本上做了转换验证。当前工具未连接用户的 Chrome，在线页面仍需重新加载扩展后实测。ChatGPT 的灰度版本可能存在其他 DOM 结构。
 
 性能参考：Node 24 + jsdom 下，同一份历史 HTML 样本预热后各测量 15 次，旧版 1.2.1 的转换中位耗时约 69 ms，新版约 20 ms，减少约 71%。这只测量本地 DOM 转换，不包含剪贴板、布局或网络耗时，不代表 Chrome 实际响应速度。可用下方基准命令测量自己的样本。
 
@@ -217,6 +221,13 @@ chatgpt-md-fab/
 
 ## 版本历史
 
+### 1.3.1
+
+- 修复新版助手消息标记导致的选区识别失败，保留旧版兼容。
+- 按助手消息限定范围，避免混入同一轮中的用户消息、隐藏思考或其他回答。
+- 支持新版加粗、斜体、代码块语言及工具栏排除标记。
+- 根据完整 HTML 导出补充脱敏结构与点击流程回归测试。
+
 ### 1.3.0
 
 - 修复回答定位、跨回答选择、多片段导出和点击时选区丢失。
@@ -271,11 +282,15 @@ ChatGPT Answer to Markdown (FAB) is a Chrome Manifest V3 extension. It injects a
 
 ## Compatibility And Performance
 
+Version 1.3.1 fixes selected assistant answers being rejected on the new page layout. It recognizes the `:assistant` suffix in `data-chatgpt-search-unit-key` / `data-content-search-unit-key` and `data-markdown-text-style="assistant-message"`, alongside legacy role attributes and `.markdown`. Export stays scoped to the assistant message rather than its mixed question-and-answer turn.
+
+It also supports `data-d-default-strong`, `data-d-font-style="italic"`, `data-code-block` and `data-markdown-copy="exclude"`. The bug was reproduced against the full HTML export supplied on 2026-10-23: all 6 loaded assistant answers now resolve and export, while all 6 user messages are rejected. Committed regression fixtures contain sanitized structure only, not the private conversation.
+
 Version 1.3.0 retains the select-and-copy workflow and fixes answer detection, selections spanning multiple answers, multi-fragment responses, CodeMirror line breaks, code whitespace, nested lists, task lists, formulas, citation links and Markdown escaping.
 
 The converter walks only the selected answer without cloning its DOM or repeatedly replacing placeholders. `markdown.js` contains selection and conversion logic; `content.js` handles the FAB and clipboard. There are no runtime dependencies or build steps.
 
-Tests cover synthetic DOM structures and click interactions. Conversion was also checked against a previously supplied HTML sample containing 3200 elements. The user's Chrome is not connected to the current tooling, so the latest live ChatGPT UI has not been verified end to end. Other rollout variants may require further adjustments.
+Tests cover sanitized current-page structure, legacy DOM and click interactions. Conversion was also checked against the supplied current and historical HTML samples. The user's Chrome is not connected to the current tooling; reload the extension and refresh the live page to verify it there. Other rollout variants may require further adjustments.
 
 On Node 24 + jsdom, after warmup and 15 measurements per version on the same historical sample, median conversion time fell from about 69 ms (1.2.1) to 20 ms (1.3.0), about 71% less. This measures local DOM conversion only, excluding clipboard, layout and network time; it is not a Chrome response-time measurement. Use the benchmark below to measure your own sample.
 
@@ -425,6 +440,13 @@ chatgpt-md-fab/
 ```
 
 ## Changelog
+
+### 1.3.1
+
+- Fixed selection detection for new assistant-message markers while retaining legacy support.
+- Scoped exports to the assistant message, excluding neighboring questions, hidden reasoning and other answers.
+- Supported current bold/italic flags, code-block language and toolbar exclusion markers.
+- Added sanitized structural fixtures and click regression tests based on the complete HTML export.
 
 ### 1.3.0
 

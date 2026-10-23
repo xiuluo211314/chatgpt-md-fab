@@ -1,9 +1,13 @@
 (function (global) {
   "use strict";
 
-  const ASSISTANT = '[data-message-author-role="assistant"], [data-turn="assistant"]';
+  const ASSISTANT_UNIT = '[data-chatgpt-search-unit-key$=":assistant"], [data-content-search-unit-key$=":assistant"]';
+  const ASSISTANT_CONTENT = '[data-markdown-text-style="assistant-message"]';
+  const ASSISTANT = `[data-message-author-role="assistant"], [data-turn="assistant"], ${ASSISTANT_UNIT}, ${ASSISTANT_CONTENT}`;
+  const USER = '[data-message-author-role="user"], [data-turn="user"], [data-user-message-bubble], [data-chatgpt-search-unit-key$=":user"], [data-content-search-unit-key$=":user"]';
+  const CONTENT = `.markdown, [data-message-content], ${ASSISTANT_CONTENT}, [data-markdown-copy="contents"]`;
   const TURN = '[data-turn], [data-testid^="conversation-turn-"], article';
-  const OMIT = 'script, style, template, svg, button, form, nav, header, footer, .sr-only, [hidden], [aria-hidden="true"], [data-message-author-role="user"]';
+  const OMIT = `script, style, template, svg, button, form, nav, header, footer, .sr-only, [hidden], [aria-hidden="true"], [data-markdown-copy="exclude"], [data-d-component="favicon"], [data-d-component="icon"], ${USER}`;
 
   function element(node) {
     return node?.nodeType === 1 ? node : node?.parentElement;
@@ -11,8 +15,14 @@
 
   function assistantAt(node) {
     const el = element(node);
-    if (!el || el.closest('[data-message-author-role="user"], [data-turn="user"]')) return null;
+    if (!el || el.closest(USER)) return null;
+    // New turn wrappers contain both the question and answer. Stay inside the assistant unit.
+    const unit = el.closest(ASSISTANT_UNIT);
+    if (unit) return unit;
     const assistant = el.closest(ASSISTANT);
+    if (assistant?.matches(ASSISTANT_CONTENT)) {
+      return assistant.closest('[data-chatgpt-selection-message-id]') || assistant;
+    }
     if (assistant) return assistant.closest(TURN) || assistant;
     const turn = el.closest(TURN);
     return turn?.querySelector('[data-message-author-role="assistant"]') ? turn : null;
@@ -23,9 +33,9 @@
       ? [turn] : Array.from(turn.querySelectorAll('[data-message-author-role="assistant"]'));
     const sources = messages.length ? messages : [turn];
     return sources.flatMap(source => {
-      const roots = source.matches('.markdown, [data-message-content]')
-        ? [source] : Array.from(source.querySelectorAll('.markdown, [data-message-content]'));
-      return roots.length ? roots.filter(root => !roots.some(other => other !== root && other.contains(root))) : [source];
+      const roots = source.matches(CONTENT) ? [source] : Array.from(source.querySelectorAll(CONTENT));
+      return roots.length ? roots.filter(root => !root.closest('[hidden], [aria-hidden="true"]')
+        && !roots.some(other => other !== root && other.contains(root))) : [source];
     });
   }
 
@@ -84,7 +94,8 @@
     let text = normalize(codeText(source)).replace(/\u00a0/g, " ");
     if (text.endsWith("\n")) text = text.slice(0, -1);
     const classes = `${pre.className} ${source.className} ${pre.querySelector('code')?.className || ""}`;
-    let language = classes.match(/(?:language|lang)-([\w#+.-]+)/i)?.[1] || pre.getAttribute('data-language') || "";
+    let language = classes.match(/(?:language|lang)-([\w#+.-]+)/i)?.[1]
+      || source.getAttribute('data-language') || pre.getAttribute('data-language') || "";
     if (!language) {
       const labels = pre.querySelectorAll('[data-language], .sticky, .select-none');
       for (const label of labels) {
@@ -166,9 +177,9 @@
         if (tex) return node.matches('.katex-display, [display="block"]') ? block(`$$\n${tex.trim()}\n$$`) : `$${tex.trim()}$`;
       }
       if (tag === "BUTTON" && node.matches('.entity-underline, .citation-marker')
-        && !node.matches('[hidden], [aria-hidden="true"]')) return children(node).trim();
+        && !node.matches('[hidden], [aria-hidden="true"], [data-markdown-copy="exclude"]')) return children(node).trim();
       if (node.matches(OMIT)) return "";
-      if (tag === "PRE" || node.matches('.cm-editor, .cm-content')) return codeBlock(node);
+      if (tag === "PRE" || node.matches('[data-code-block], [data-markdown-copy="code-block"], .cm-editor, .cm-content')) return codeBlock(node);
       if (tag === "CODE") return inlineCode(node.textContent);
       if (tag === "BR") return "  \n";
       if (tag === "INPUT") return "";
@@ -188,8 +199,10 @@
         return src ? `![${escapeText(node.getAttribute('alt') || "")}](${src})` : "";
       }
       const text = children(node);
-      if (tag === "STRONG" || tag === "B" || tag === "EM" || tag === "I" || tag === "DEL" || tag === "S") {
-        const marker = /^(STRONG|B)$/.test(tag) ? "**" : /^(DEL|S)$/.test(tag) ? "~~" : "*";
+      const bold = /^(STRONG|B)$/.test(tag) || node.hasAttribute('data-d-default-strong');
+      const italic = /^(EM|I)$/.test(tag) || node.getAttribute('data-d-font-style') === "italic";
+      if (bold || italic || /^(DEL|S)$/.test(tag)) {
+        const marker = /^(DEL|S)$/.test(tag) ? "~~" : (bold ? "**" : "") + (italic ? "*" : "");
         return text.trim() ? text.replace(/^(\s*)([\s\S]*?)(\s*)$/, (_, before, body, after) => `${before}${marker}${body}${marker}${after}`) : text;
       }
       if (tag === "DIV" || tag === "SECTION" || tag === "ARTICLE" || tag === "FIGURE" || tag === "FIGCAPTION") return block(text.trim());

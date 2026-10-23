@@ -11,7 +11,8 @@ const html = process.argv[2] ? fs.readFileSync(process.argv[2], 'utf8') : `<main
   <table><tr><th>A</th><th>B</th></tr><tr><td>One</td><td>Two</td></tr></table>`).join('')}</main>`;
 const window = new JSDOM(html, { url: 'https://chatgpt.com/c/benchmark' }).window;
 try {
-  const root = window.document.querySelector('.markdown') || window.document.body;
+  const root = Array.from(window.document.querySelectorAll('.markdown, [data-markdown-text-style="assistant-message"]'))
+    .find(node => !node.closest('[hidden], [aria-hidden="true"]')) || window.document.body;
   for (let i = 0; i < 3; i++) htmlToMarkdown(root);
   const times = [];
   let output;

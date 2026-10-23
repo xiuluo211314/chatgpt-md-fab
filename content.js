@@ -181,7 +181,7 @@
       if (answer.status !== "ok" || !answer.turn.isConnected) {
         const messages = {
           "multiple-answers": "请只在同一条助手回答内选择文字。",
-          "not-assistant": "请选中助手回答中的文字，不能选择用户消息。"
+          "not-assistant": "未能识别选区所属的助手回答，请在回答正文内重新选择。"
         };
         toast(messages[answer.status] || "请先在目标回答中选中任意文字，再点击 MD。", "warn");
         return;
